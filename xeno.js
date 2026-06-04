@@ -8,7 +8,7 @@ const app = express();
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000/callback";
-
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const USERS_FILE = path.join(__dirname, 'users.json');
 const WHITELIST_FILE = path.join(__dirname, 'whitelist.json');
 const BLACKLIST_FILE = path.join(__dirname, 'blacklist.json'); // File lưu trữ Blacklist mới
