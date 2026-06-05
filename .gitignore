@@ -3,3 +3,4 @@ node_modules
 users.json
 whitelist.json
 blacklist.json
+xenosigma.js
