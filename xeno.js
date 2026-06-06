@@ -32,7 +32,6 @@ let cachedDb = null;
 let cachedCollection = null;
 
 async function connectDB() {
-    // Nếu đã có kết nối trong Cache, dùng lại luôn để tiết kiệm thời gian
     if (cachedDb && cachedCollection) {
         return { db: cachedDb, configCollection: cachedCollection };
     }
@@ -42,19 +41,27 @@ async function connectDB() {
         const db = client.db('xenostia_db');
         const configCollection = db.collection('system_data');
         
-        // Khởi tạo tài liệu cấu hình mặc định nếu database trống
         const existing = await configCollection.findOne({ _id: 'main_config' });
         if (!existing) {
             await configCollection.insertOne({
                 _id: 'main_config',
                 users: {},
                 whitelist: {},
-                blacklist: {}
+                blacklist: {},
+                maintenance: false,   // Thêm mặc định trạng thái bảo trì
+                announcement: ""     // Thêm mặc định thông báo từ admin
             });
             console.log("👉 Đã tạo dữ liệu gốc trên MongoDB");
+        } else {
+            // Tự động bổ sung cấu trúc trường cũ nếu thiếu sót
+            let updates = {};
+            if (!existing.hasOwnProperty('maintenance')) updates.maintenance = false;
+            if (!existing.hasOwnProperty('announcement')) updates.announcement = "";
+            if (Object.keys(updates).length > 0) {
+                await configCollection.updateOne({ _id: 'main_config' }, { $set: updates });
+            }
         }
 
-        // Lưu vào cache
         cachedDb = db;
         cachedCollection = configCollection;
         
@@ -65,7 +72,6 @@ async function connectDB() {
     }
 }
 
-// 🔄 ĐẢM BẢO CÁC HÀM TRỢ GIÚP ĐỀU PHẢI ĐỢI KẾT NỐI DB XONG
 async function getSystemData() {
     const { configCollection } = await connectDB();
     return await configCollection.findOne({ _id: 'main_config' });
@@ -182,27 +188,42 @@ app.get('/callback', async (req, res) => {
     }
 });
 
-app.get('/api/heartbeat', async (req, res) => {
-    const userId = req.query.id;
-    if (!userId) return res.json({ approved: false });
-
-    if (await isBlacklisted(userId)) {
-        return res.json({ approved: false, blacklist: true });
-    }
-    if (await isWhitelisted(userId)) {
-        return res.json({ approved: true });
-    }
-
+// ⚡ API CHECK TRẠNG THÁI SERVER CHUNG (Cho khách hoặc khi chưa đăng nhập)
+app.get('/api/server-status', async (req, res) => {
     try {
         const data = await getSystemData();
-        if (data.users[userId] && data.users[userId].approved === true) {
-            return res.json({ approved: true });
-        }
+        res.json({
+            maintenance: data.maintenance || false,
+            announcement: data.announcement || ""
+        });
     } catch (e) {
-        console.error("Lỗi đọc cấu trúc dữ liệu người dùng:", e);
+        res.json({ maintenance: false, announcement: "" });
+    }
+});
+
+// 🕒 API TUẦN TRA REAL-TIME CỦA USER ĐANG ONLINE
+app.get('/api/heartbeat', async (req, res) => {
+    const userId = req.query.id;
+    const data = await getSystemData();
+    const globalStatus = {
+        maintenance: data.maintenance || false,
+        announcement: data.announcement || ""
+    };
+
+    if (!userId) return res.json({ approved: false, ...globalStatus });
+
+    if (await isBlacklisted(userId)) {
+        return res.json({ approved: false, blacklist: true, ...globalStatus });
+    }
+    if (await isWhitelisted(userId)) {
+        return res.json({ approved: true, ...globalStatus });
     }
 
-    res.json({ approved: false, blacklist: false });
+    if (data.users[userId] && data.users[userId].approved === true) {
+        return res.json({ approved: true, ...globalStatus });
+    }
+
+    res.json({ approved: false, blacklist: false, ...globalStatus });
 });
 
 app.get('/api/check-user', async (req, res) => {
@@ -246,6 +267,8 @@ app.get('/admin', async (req, res) => {
     const usersData = data.users;
     const whitelistData = data.whitelist;
     const blacklistData = data.blacklist;
+    const isMaintenance = data.maintenance || false;
+    const currentAnnouncement = data.announcement || "";
 
     let rowsUsers = '';
     for (const [id, user] of Object.entries(usersData)) {
@@ -283,13 +306,34 @@ app.get('/admin', async (req, res) => {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Xenostia Control Panel v4.5</title>
+        <title>Xenostia Control Panel v5.0</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>body { background-color: #121214; color: #fff; } .card { background-color: #1a1a24; border: none; color: #fff; }</style>
     </head>
     <body>
         <div class="container-fluid px-5 py-4">
             <h2 class="text-center text-warning mb-4">🛡️ BẢNG ĐIỀU HÀNH TRUNG TÂM XENOSTIA 🛡️</h2>
+            
+            <div class="card p-4 mb-4 border border-warning">
+                <h3 class="text-warning border-bottom pb-2">⚙️ Trạng Thái Máy Chủ Máy Chủ & Thông Báo Khẩn</h3>
+                <div class="row align-items-center g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Chế độ bảo trì hệ thống:</label>
+                        <div class="form-check form-switch fs-4">
+                            <input class="form-check-input" type="checkbox" id="maintenance_switch" ${isMaintenance ? 'checked' : ''} onchange="changeMaintenanceStatus()">
+                            <span class="badge ${isMaintenance ? 'bg-danger' : 'bg-success'} fs-6" id="maint_badge">${isMaintenance ? 'ĐANG BẢO TRÌ' : 'HOẠT ĐỘNG'}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label fw-bold">Nội dung thông báo phát từ Admin:</label>
+                        <div class="input-group">
+                            <input type="text" id="announcement_input" class="form-control" placeholder="Nhập dòng chữ thông báo gửi tới giao diện hack..." value="${currentAnnouncement}">
+                            <button class="btn btn-warning fw-bold" onclick="updateAnnouncement()">Phát Thông Báo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="card p-4 h-100">
@@ -332,6 +376,24 @@ app.get('/admin', async (req, res) => {
         </div>
         <script>
             const currentPwd = new URLSearchParams(window.location.search).get('pwd') || '';
+
+            function changeMaintenanceStatus() {
+                const isChecked = document.getElementById('maintenance_switch').checked;
+                fetch('/api/system-settings?pwd=' + currentPwd, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'maintenance', value: isChecked })
+                }).then(() => location.reload());
+            }
+
+            function updateAnnouncement() {
+                const msg = document.getElementById('announcement_input').value;
+                fetch('/api/system-settings?pwd=' + currentPwd, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'announcement', value: msg })
+                }).then(() => alert("Đã cập nhật dòng thông báo khẩn!"));
+            }
 
             function toggleApprove(id) { 
                 fetch('/api/toggle-approve?pwd=' + currentPwd, { 
@@ -377,6 +439,20 @@ app.get('/admin', async (req, res) => {
         </script>
     </body>
     </html>`);
+});
+
+// 🛠️ API ĐIỀU CHỈNH CẤU HÌNH HỆ THỐNG
+app.post('/api/system-settings', async (req, res) => {
+    if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
+    
+    const { key, value } = req.body;
+    if (key === 'maintenance' || key === 'announcement') {
+        let updateObj = {};
+        updateObj[key] = value;
+        await updateSystemData(updateObj);
+        return res.json({ success: true });
+    }
+    res.status(400).json({ error: "Invalid key" });
 });
 
 app.post('/api/toggle-approve', async (req, res) => {

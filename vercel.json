@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "xeno.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["xenosigma.js", "bytebuffer.min.js"]
+      }
     }
   ],
   "routes": [
