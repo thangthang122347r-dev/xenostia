@@ -13,7 +13,6 @@ const BLACKLIST_FILE = path.join(__dirname, 'blacklist.json'); // File lÆ°u trá»
 const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js');
 const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js');
 const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia21.onrender.com/callback';
-module.exports = app;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
@@ -382,3 +381,4 @@ app.post('/api/manage-blacklist', (req, res) => {
     fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
     res.json({ success: true });
 });
+module.exports = app;
