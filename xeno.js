@@ -13,7 +13,7 @@ const WHITELIST_FILE = path.join('/tmp', 'whitelist.json');
 const BLACKLIST_FILE = path.join('/tmp', 'blacklist.json');
 const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js'); // Giữ nguyên file code đọc
 const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js'); // Giữ nguyên file code đọc
-const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia21.onrender.com/callback';
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia.vercel.app/callback';
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
