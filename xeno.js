@@ -56,7 +56,6 @@ app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.status(400).send("Không tìm thấy Code xác thực.");
 
-    // 🛠️ THÊM ĐOẠN LOG ĐỂ KIỂM TRA PAYLOAD TẠI ĐÂY:
     console.log("Payload gửi đến Discord:", {
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET ? "Đã có secret" : "MISSING",
@@ -65,13 +64,24 @@ app.get('/callback', async (req, res) => {
     });
 
     try {
-        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: REDIRECT_URI,
-        }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        // Sử dụng URLSearchParams bọc ngoài và ép hẳn sang chuỗi bằng .toString()
+        const params = new URLSearchParams();
+        params.append('client_id', CLIENT_ID);
+        params.append('client_secret', CLIENT_SECRET);
+        params.append('grant_type', 'authorization_code');
+        params.append('code', code);
+        params.append('redirect_uri', REDIRECT_URI);
+
+        const tokenResponse = await axios.post(
+            'https://discord.com/api/oauth2/token', 
+            params.toString(), // Ép chuỗi tường minh ở đây
+            { 
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'DiscordBot (https://github.com/vaxil, 1.0.0)' // Discord yêu cầu có User-Agent cụ thể để tránh bị chặn nghi ngờ
+                } 
+            }
+        );
 
         const accessToken = tokenResponse.data.access_token;
 
@@ -84,7 +94,6 @@ app.get('/callback', async (req, res) => {
             ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
             : `https://cdn.discordapp.com/embed/avatars/${userData.id % 5}.png`;
 
-        // Nếu nằm trong danh sách đen, xử lý chặn ngay từ bước đăng nhập
         if (isBlacklisted(userData.id)) {
             return res.send(`
                 <script>
@@ -128,7 +137,7 @@ app.get('/callback', async (req, res) => {
             </html>
         `);
     } catch (error) {
-        console.error("Lỗi OAuth2:", error.response ? error.response.data : error.message);
+        console.error("Lỗi OAuth2 Chi tiết:", error.response ? error.response.data : error.message);
         res.status(500).send("Quá trình trao đổi mã xác thực Discord thất bại.");
     }
 });
