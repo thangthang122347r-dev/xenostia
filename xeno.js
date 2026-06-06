@@ -3,37 +3,17 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const mongoose = require('mongoose'); // Thêm Mongoose
+const { MongoClient } = require('mongodb'); // Thêm driver MongoDB
+
 const app = express();
-
-// --- CẤU HÌNH MONGODB ---
-mongoose.connect(process.env.MONGODB_URI);
-
-const DataSchema = new mongoose.Schema({
-    _id: String,
-    users: Object,
-    whitelist: Object,
-    blacklist: Object
-});
-const AppModel = mongoose.model('AppData', DataSchema);
-
-// Hàm lấy dữ liệu (thay cho việc đọc file JSON)
-async function getDB() {
-    let doc = await AppModel.findById('main_config');
-    if (!doc) {
-        doc = new AppModel({ _id: 'main_config', users: {}, whitelist: {}, blacklist: {} });
-        await doc.save();
-    }
-    return doc;
-}
 
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia.vercel.app/callback';
 
 const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js'); 
 const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js'); 
-const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia.vercel.app/callback';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -43,18 +23,54 @@ app.use((req, res, next) => {
     next();
 });
 
-// Hàm logic giữ nguyên nhưng dùng async/await
+// 🗄️ CẤU HÌNH VÀ KẾT NỐI MONGODB
+const client = new MongoClient(process.env.MONGODB_URI);
+let db, configCollection;
+
+async function initDB() {
+    try {
+        await client.connect();
+        db = client.db('xenostia_db');
+        configCollection = db.collection('system_data');
+        
+        // Khởi tạo document gốc nếu database trống
+        const existing = await configCollection.findOne({ _id: 'main_config' });
+        if (!existing) {
+            await configCollection.insertOne({
+                _id: 'main_config',
+                users: {},
+                whitelist: {},
+                blacklist: {}
+            });
+            console.log("👉 Đã khởi tạo dữ liệu mặc định trên MongoDB");
+        }
+        console.log("✅ Kết nối thành công MongoDB!");
+    } catch (err) {
+        console.error("❌ Lỗi kết nối MongoDB:", err);
+    }
+}
+initDB();
+
+// 🔄 HÀM TRỢ GIÚP: ĐỌC / GHI CHO GIỐNG LOGIC FILE CŨ CỦA ÔNG
+async function getSystemData() {
+    return await configCollection.findOne({ _id: 'main_config' });
+}
+
+async function updateSystemData(newData) {
+    await configCollection.updateOne({ _id: 'main_config' }, { $set: newData });
+}
+
 async function isWhitelisted(userId) {
-    const doc = await getDB();
-    return doc.whitelist.hasOwnProperty(userId);
+    const data = await getSystemData();
+    return data.whitelist.hasOwnProperty(userId);
 }
 
 async function isBlacklisted(userId) {
-    const doc = await getDB();
-    return doc.blacklist.hasOwnProperty(userId);
+    const data = await getSystemData();
+    return data.blacklist.hasOwnProperty(userId);
 }
 
-// 📦 API PHÂN PHỐI BYTEBUFFER LOCAL (Giữ nguyên fs vì là file tĩnh)
+// 📦 API PHÂN PHỐI BYTEBUFFER LOCAL
 app.get('/libs/bytebuffer.min.js', (req, res) => {
     if (fs.existsSync(BYTEBUFFER_PATH)) {
         res.setHeader('Content-Type', 'application/javascript');
@@ -81,30 +97,71 @@ app.get('/callback', async (req, res) => {
         params.append('code', code);
         params.append('redirect_uri', REDIRECT_URI);
 
-        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', params.toString(), { 
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'DiscordBot' } 
-        });
+        const tokenResponse = await axios.post(
+            'https://discord.com/api/oauth2/token', 
+            params.toString(),
+            { 
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'DiscordBot (https://github.com/vaxil, 1.0.0)'
+                } 
+            }
+        );
 
+        const accessToken = tokenResponse.data.access_token;
         const userResponse = await axios.get('https://discord.com/api/users/@me', {
-            headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` }
+            headers: { Authorization: `Bearer ${accessToken}` }
         });
 
         const userData = userResponse.data;
-        const avatarUrl = userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/${userData.id % 5}.png`;
+        const avatarUrl = userData.avatar 
+            ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${userData.id % 5}.png`;
 
         if (await isBlacklisted(userData.id)) {
-            return res.send(`<script>alert("🚨 Tài khoản này đã bị cấm!"); window.close();</script>`);
+            return res.send(`
+                <script>
+                    alert("🚨 Tài khoản này đã bị cấm vĩnh viễn khỏi hệ thống!");
+                    window.close();
+                </script>
+            `);
         }
 
-        const doc = await getDB();
-        if (!doc.users[userData.id]) {
-            doc.users[userData.id] = { username: userData.username, approved: false, time: new Date().toLocaleString() };
-            doc.markModified('users'); // Cực kỳ quan trọng khi dùng Mongoose với Object
-            await doc.save();
+        const data = await getSystemData();
+        if (!data.users[userData.id]) {
+            data.users[userData.id] = {
+                username: userData.username,
+                approved: false, 
+                time: new Date().toLocaleString()
+            };
+            await updateSystemData({ users: data.users });
         }
 
-        res.send(`<!DOCTYPE html><html><body><script>const authData = { type: 'DISCORD_LOGIN_SUCCESS', id: '${userData.id}', username: '${userData.username}', avatar: '${avatarUrl}' }; if(window.opener){ window.opener.postMessage(authData, 'https://zombs.io'); window.close(); } else { document.body.innerHTML = "Đăng nhập xong!"; }</script></body></html>`);
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Đang xác thực...</title></head>
+            <body>
+                <h3 style="text-align:center; font-family:sans-serif; margin-top:50px;">Xác thực thành công! Đang đồng bộ hóa dữ liệu...</h3>
+                <script>
+                    const authData = {
+                        type: 'DISCORD_LOGIN_SUCCESS',
+                        id: '${userData.id}',
+                        username: '${userData.username}',
+                        avatar: '${avatarUrl}'
+                    };
+                    if (window.opener) {
+                        window.opener.postMessage(authData, 'https://zombs.io');
+                        window.close();
+                    } else {
+                        document.body.innerHTML = "<h2 style='color:green; text-align:center;'>Đăng nhập xong! Bạn có thể tắt tab này và tải lại game.</h2>";
+                    }
+                </script>
+            </body>
+            </html>
+        `);
     } catch (error) {
+        console.error("Lỗi OAuth2 Chi tiết:", error.response ? error.response.data : error.message);
         res.status(500).send("Quá trình trao đổi mã xác thực Discord thất bại.");
     }
 });
@@ -113,13 +170,22 @@ app.get('/api/heartbeat', async (req, res) => {
     const userId = req.query.id;
     if (!userId) return res.json({ approved: false });
 
-    if (await isBlacklisted(userId)) return res.json({ approved: false, blacklist: true });
-    if (await isWhitelisted(userId)) return res.json({ approved: true });
-
-    const doc = await getDB();
-    if (doc.users[userId] && doc.users[userId].approved === true) {
+    if (await isBlacklisted(userId)) {
+        return res.json({ approved: false, blacklist: true });
+    }
+    if (await isWhitelisted(userId)) {
         return res.json({ approved: true });
     }
+
+    try {
+        const data = await getSystemData();
+        if (data.users[userId] && data.users[userId].approved === true) {
+            return res.json({ approved: true });
+        }
+    } catch (e) {
+        console.error("Lỗi đọc cấu trúc dữ liệu người dùng:", e);
+    }
+
     res.json({ approved: false, blacklist: false });
 });
 
@@ -127,35 +193,76 @@ app.get('/api/check-user', async (req, res) => {
     const userId = req.query.id;
     if (!userId) return res.json({ approved: false });
 
-    if (await isBlacklisted(userId)) return res.json({ approved: false, blacklist: true, message: "Bị thu hồi quyền!" });
-
-    const doc = await getDB();
-    if (await isWhitelisted(userId)) {
-        if (!doc.users[userId]) doc.users[userId] = { username: "User Whitelist", time: new Date().toLocaleString() };
-        doc.users[userId].approved = true;
-        doc.markModified('users');
-        await doc.save();
+    if (await isBlacklisted(userId)) {
+        return res.json({ approved: false, blacklist: true, message: "Bị thu hồi quyền vĩnh viễn!" });
     }
 
-    if (doc.users[userId] && doc.users[userId].approved === true) {
-        return res.json({ approved: true, script: fs.existsSync(HACK_SCRIPT_PATH) ? fs.readFileSync(HACK_SCRIPT_PATH, 'utf8') : "" });
+    const data = await getSystemData();
+
+    if (data.whitelist.hasOwnProperty(userId)) {
+        if (!data.users[userId]) data.users[userId] = { username: "User Whitelist", time: new Date().toLocaleString() };
+        data.users[userId].approved = true;
+        await updateSystemData({ users: data.users });
+    }
+
+    if (data.users[userId] && data.users[userId].approved === true) {
+        if (fs.existsSync(HACK_SCRIPT_PATH)) {
+            return res.json({ approved: true, script: fs.readFileSync(HACK_SCRIPT_PATH, 'utf8') });
+        }
+        return res.json({ approved: true, message: "Thiếu hack_script.js", script: "" });
     }
     res.json({ approved: false, blacklist: false, message: "Chờ phê duyệt." });
 });
 
 // DASHBOARD HỆ THỐNG QUẢN LÝ
 app.get('/admin', async (req, res) => {
-    if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).send("🚫 Truy cập bị từ chối");
+    const password = req.query.pwd;
 
-    const doc = await getDB();
-    let rowsUsers = '';
-    for (const [id, user] of Object.entries(doc.users)) {
-        if (doc.blacklist.hasOwnProperty(id)) continue;
-        const badgeColor = user.approved ? 'success' : 'secondary';
-        rowsUsers += `<tr><td><code>${id}</code></td><td><b>${user.username}</b></td><td><span class="badge bg-${badgeColor}">${user.approved ? 'Đã cấp' : 'Chờ'}</span></td><td><button class="btn btn-sm ${user.approved ? 'btn-outline-warning' : 'btn-success'}" onclick="toggleApprove('${id}')">${user.approved ? 'Thu hồi' : 'Duyệt'}</button></td></tr>`;
+    if (!password || password !== ADMIN_PASSWORD) {
+        return res.status(403).send(`
+            <style>body { background: #1e1e24; color: #ff5555; font-family: sans-serif; text-align: center; padding-top: 100px; }</style>
+            <h2>🚫 TRUY CẬP BỊ TỪ CHỐI 🚫</h2>
+            <p>Bạn không có quyền hạn truy cập vào hệ thống điều hành này!</p>
+        `);
     }
 
-   res.send(`
+    const data = await getSystemData();
+    const usersData = data.users;
+    const whitelistData = data.whitelist;
+    const blacklistData = data.blacklist;
+
+    let rowsUsers = '';
+    for (const [id, user] of Object.entries(usersData)) {
+        if (blacklistData.hasOwnProperty(id)) continue;
+
+        const badgeColor = user.approved ? 'success' : 'secondary';
+        const badgeText = user.approved ? 'Đã cấp quyền' : 'Chờ duyệt';
+        const btnColor = user.approved ? 'btn-outline-warning' : 'btn-success';
+        const btnText = user.approved ? 'Thu hồi quyền' : 'Duyệt nhanh';
+        
+        rowsUsers += `
+        <tr>
+            <td><code>${id}</code></td>
+            <td><b>${user.username}</b></td>
+            <td><span class="badge bg-${badgeColor}">${badgeText}</span></td>
+            <td>
+                <button class="btn ${btnColor} btn-sm me-1" onclick="toggleApprove('${id}')">${btnText}</button>
+                <button class="btn btn-danger btn-sm" onclick="banUser('${id}', '${user.username}')">Ban Vĩnh Viễn</button>
+            </td>
+        </tr>`;
+    }
+
+    let rowsWhitelist = '';
+    for (const [id, name] of Object.entries(whitelistData)) {
+        rowsWhitelist += `<tr class="table-info"><td><code>${id}</code></td><td><b>👑 ${name}</b></td><td><button class="btn btn-danger btn-sm fw-bold" onclick="removeFromWhitelist('${id}')">🚫 GỠ VIP</button></td></tr>`;
+    }
+
+    let rowsBlacklist = '';
+    for (const [id, name] of Object.entries(blacklistData)) {
+        rowsBlacklist += `<tr class="table-danger text-dark"><td><code>${id}</code></td><td><b>💀 ${name}</b></td><td><button class="btn btn-success btn-sm fw-bold" onclick="unbanUser('${id}')">Ân Xá</button></td></tr>`;
+    }
+
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -258,36 +365,45 @@ app.get('/admin', async (req, res) => {
 
 app.post('/api/toggle-approve', async (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
-    const doc = await getDB();
-    if (doc.users[req.body.id]) { 
-        doc.users[req.body.id].approved = !doc.users[req.body.id].approved; 
-        doc.markModified('users');
-        await doc.save(); 
+    
+    const userId = req.body.id;
+    const data = await getSystemData();
+    if (data.users[userId]) { 
+        data.users[userId].approved = !data.users[userId].approved; 
+        await updateSystemData({ users: data.users });
     }
     res.json({ success: true });
 });
 
 app.post('/api/manage-whitelist', async (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
-    const doc = await getDB();
+
     const { id, name, action } = req.body;
-    if (action === 'add') doc.whitelist[id] = name;
-    else if (action === 'remove') { delete doc.whitelist[id]; if (doc.users[id]) doc.users[id].approved = false; }
-    doc.markModified('whitelist');
-    doc.markModified('users');
-    await doc.save();
+    const data = await getSystemData();
+
+    if (action === 'add') data.whitelist[id] = name;
+    else if (action === 'remove') { 
+        delete data.whitelist[id]; 
+        if (data.users[id]) data.users[id].approved = false; 
+    }
+    await updateSystemData({ whitelist: data.whitelist, users: data.users });
     res.json({ success: true });
 });
 
 app.post('/api/manage-blacklist', async (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
-    const doc = await getDB();
+
     const { id, name, action } = req.body;
-    if (action === 'ban') { doc.blacklist[id] = name || "Bị cấm"; if (doc.users[id]) doc.users[id].approved = false; }
-    else if (action === 'unban') { delete doc.blacklist[id]; }
-    doc.markModified('blacklist');
-    doc.markModified('users');
-    await doc.save();
+    const data = await getSystemData();
+
+    if (action === 'ban') {
+        data.blacklist[id] = name || "Bị cấm";
+        if (data.users[id]) data.users[id].approved = false; 
+    } else if (action === 'unban') {
+        delete data.blacklist[id];
+    }
+
+    await updateSystemData({ blacklist: data.blacklist, users: data.users });
     res.json({ success: true });
 });
 
