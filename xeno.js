@@ -2,18 +2,24 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const os = require('os'); // Thêm mô-đun os để lấy thư mục tạm chuẩn hệ điều hành
 const axios = require('axios');
 const app = express();
+
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-// Thay đổi định nghĩa đường dẫn file sang thư mục /tmp
-const USERS_FILE = path.join('/tmp', 'users.json');
-const WHITELIST_FILE = path.join('/tmp', 'whitelist.json');
-const BLACKLIST_FILE = path.join('/tmp', 'blacklist.json');
-const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js'); // Giữ nguyên file code đọc
-const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js'); // Giữ nguyên file code đọc
+
+// Sử dụng os.tmpdir() để tương thích tốt cả Windows (Local) và Linux (Vercel)
+const TMP_DIR = os.tmpdir();
+const USERS_FILE = path.join(TMP_DIR, 'users.json');
+const WHITELIST_FILE = path.join(TMP_DIR, 'whitelist.json');
+const BLACKLIST_FILE = path.join(TMP_DIR, 'blacklist.json');
+
+const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js'); 
+const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js'); 
 const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia.vercel.app/callback';
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
@@ -22,19 +28,23 @@ app.use((req, res, next) => {
     next();
 });
 
-// Khởi tạo các file database nếu chưa tồn tại
+// Khởi tạo các file database tạm thời nếu chưa tồn tại
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '{}', 'utf8');
 if (!fs.existsSync(WHITELIST_FILE)) fs.writeFileSync(WHITELIST_FILE, '{}', 'utf8');
 if (!fs.existsSync(BLACKLIST_FILE)) fs.writeFileSync(BLACKLIST_FILE, '{}', 'utf8');
 
 function isWhitelisted(userId) {
-    const whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
-    return whitelist.hasOwnProperty(userId);
+    try {
+        const whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
+        return whitelist.hasOwnProperty(userId);
+    } catch { return false; }
 }
 
 function isBlacklisted(userId) {
-    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
-    return blacklist.hasOwnProperty(userId);
+    try {
+        const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
+        return blacklist.hasOwnProperty(userId);
+    } catch { return false; }
 }
 
 // 📦 API PHÂN PHỐI BYTEBUFFER LOCAL
@@ -56,15 +66,7 @@ app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.status(400).send("Không tìm thấy Code xác thực.");
 
-    console.log("Payload gửi đến Discord:", {
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET ? "Đã có secret" : "MISSING",
-        code: code,
-        redirect_uri: REDIRECT_URI
-    });
-
     try {
-        // Sử dụng URLSearchParams bọc ngoài và ép hẳn sang chuỗi bằng .toString()
         const params = new URLSearchParams();
         params.append('client_id', CLIENT_ID);
         params.append('client_secret', CLIENT_SECRET);
@@ -74,17 +76,16 @@ app.get('/callback', async (req, res) => {
 
         const tokenResponse = await axios.post(
             'https://discord.com/api/oauth2/token', 
-            params.toString(), // Ép chuỗi tường minh ở đây
+            params.toString(),
             { 
                 headers: { 
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'User-Agent': 'DiscordBot (https://github.com/vaxil, 1.0.0)' // Discord yêu cầu có User-Agent cụ thể để tránh bị chặn nghi ngờ
+                    'User-Agent': 'DiscordBot (https://github.com/vaxil, 1.0.0)'
                 } 
             }
         );
 
         const accessToken = tokenResponse.data.access_token;
-
         const userResponse = await axios.get('https://discord.com/api/users/@me', {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -127,7 +128,8 @@ app.get('/callback', async (req, res) => {
                         avatar: '${avatarUrl}'
                     };
                     if (window.opener) {
-                        window.opener.postMessage(authData, '*');
+                        // Thay thế '*' bằng origin cụ thể để tăng tính bảo mật bảo vệ token dữ liệu
+                        window.opener.postMessage(authData, 'https://zombs.io');
                         window.close();
                     } else {
                         document.body.innerHTML = "<h2 style='color:green; text-align:center;'>Đăng nhập xong! Bạn có thể tắt tab này và tải lại game.</h2>";
@@ -146,7 +148,6 @@ app.get('/api/heartbeat', (req, res) => {
     const userId = req.query.id;
     if (!userId) return res.json({ approved: false });
 
-    // 1. Kiểm tra danh sách đen / danh sách trắng cứng trước
     if (isBlacklisted(userId)) {
         return res.json({ approved: false, blacklist: true });
     }
@@ -154,19 +155,18 @@ app.get('/api/heartbeat', (req, res) => {
         return res.json({ approved: true });
     }
 
-    // 2. Kiểm tra trạng thái lưu trong tệp tin users.json
     try {
         const usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
         if (usersData[userId] && usersData[userId].approved === true) {
             return res.json({ approved: true });
         }
     } catch (e) {
-        console.error("Lỗi đọc file cấu trúc dữ liệu người dùng:", e);
+        console.error("Lỗi đọc cấu trúc dữ liệu người dùng:", e);
     }
 
     res.json({ approved: false, blacklist: false });
 });
-// API lấy script hack ban đầu
+
 app.get('/api/check-user', (req, res) => {
     const userId = req.query.id;
     if (!userId) return res.json({ approved: false });
@@ -192,7 +192,7 @@ app.get('/api/check-user', (req, res) => {
     res.json({ approved: false, blacklist: false, message: "Chờ phê duyệt." });
 });
 
-// DASHBOARD HỆ THỐNG QUẢN LÝ 
+// DASHBOARD HỆ THỐNG QUẢN LÝ
 app.get('/admin', (req, res) => {
     const password = req.query.pwd;
 
@@ -208,10 +208,9 @@ app.get('/admin', (req, res) => {
     const whitelistData = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
     const blacklistData = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
 
-    // Render danh sách người dùng (Chỉ hiện những ai KHÔNG nằm trong blacklist)
     let rowsUsers = '';
     for (const [id, user] of Object.entries(usersData)) {
-        if (blacklistData.hasOwnProperty(id)) continue; // Ẩn hoàn toàn khỏi danh sách online/chờ duyệt thông thường
+        if (blacklistData.hasOwnProperty(id)) continue;
 
         const badgeColor = user.approved ? 'success' : 'secondary';
         const badgeText = user.approved ? 'Đã cấp quyền' : 'Chờ duyệt';
@@ -230,13 +229,11 @@ app.get('/admin', (req, res) => {
         </tr>`;
     }
 
-    // Render danh sách Whitelist VIP
     let rowsWhitelist = '';
     for (const [id, name] of Object.entries(whitelistData)) {
         rowsWhitelist += `<tr class="table-info"><td><code>${id}</code></td><td><b>👑 ${name}</b></td><td><button class="btn btn-danger btn-sm fw-bold" onclick="removeFromWhitelist('${id}')">🚫 GỠ VIP</button></td></tr>`;
     }
 
-    // Render danh sách Blacklist
     let rowsBlacklist = '';
     for (const [id, name] of Object.entries(blacklistData)) {
         rowsBlacklist += `<tr class="table-danger text-dark"><td><code>${id}</code></td><td><b>💀 ${name}</b></td><td><button class="btn btn-success btn-sm fw-bold" onclick="unbanUser('${id}')">Ân Xá</button></td></tr>`;
@@ -343,7 +340,6 @@ app.get('/admin', (req, res) => {
     </html>`);
 });
 
-// PROTECTED API: BẢO VỆ DỮ LIỆU ĐỔI TRẠNG THÁI
 app.post('/api/toggle-approve', (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
     
@@ -372,7 +368,6 @@ app.post('/api/manage-whitelist', (req, res) => {
     res.json({ success: true });
 });
 
-// API QUẢN LÝ DANH SÁCH ĐEN (BLACKLIST)
 app.post('/api/manage-blacklist', (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
 
@@ -382,7 +377,7 @@ app.post('/api/manage-blacklist', (req, res) => {
 
     if (action === 'ban') {
         blacklist[id] = name || "Bị cấm";
-        if (usersData[id]) usersData[id].approved = false; // Thu hồi quyền lập tức
+        if (usersData[id]) usersData[id].approved = false; 
     } else if (action === 'unban') {
         delete blacklist[id];
     }
@@ -391,4 +386,5 @@ app.post('/api/manage-blacklist', (req, res) => {
     fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
     res.json({ success: true });
 });
+
 module.exports = app;
