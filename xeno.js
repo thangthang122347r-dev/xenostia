@@ -12,7 +12,8 @@ const WHITELIST_FILE = path.join(__dirname, 'whitelist.json');
 const BLACKLIST_FILE = path.join(__dirname, 'blacklist.json'); // File lưu trữ Blacklist mới
 const HACK_SCRIPT_PATH = path.join(__dirname, 'xenosigma.js');
 const BYTEBUFFER_PATH = path.join(__dirname, 'bytebuffer.min.js');
-const REDIRECT_URI = process.env.REDIRECT_URI || 'git add .';
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://xenostia21.onrender.com/callback';
+module.exports = app;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
@@ -51,10 +52,17 @@ app.get('/libs/bytebuffer.min.js', (req, res) => {
         .catch(() => res.status(500).send("Không thể tải ByteBuffer"));
 });
 
-// 🔑 ROUTER CALLBACK XỬ LÝ ĐĂNG NHẬP DISCORD
 app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.status(400).send("Không tìm thấy Code xác thực.");
+
+    // 🛠️ THÊM ĐOẠN LOG ĐỂ KIỂM TRA PAYLOAD TẠI ĐÂY:
+    console.log("Payload gửi đến Discord:", {
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET ? "Đã có secret" : "MISSING",
+        code: code,
+        redirect_uri: REDIRECT_URI
+    });
 
     try {
         const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
@@ -374,5 +382,3 @@ app.post('/api/manage-blacklist', (req, res) => {
     fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
     res.json({ success: true });
 });
-
-app.listen(3000, () => console.log("Server Local v4.5 Core Blacklist Online!"));
