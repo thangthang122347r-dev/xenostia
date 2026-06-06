@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const os = require('os'); // Thêm mô-đun os để lấy thư mục tạm chuẩn hệ điều hành
+const os = require('os');
 const axios = require('axios');
 const app = express();
 
@@ -10,7 +10,14 @@ const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 
-// Sử dụng os.tmpdir() để tương thích tốt cả Windows (Local) và Linux (Vercel)
+// Bộ nhớ RAM đồng bộ tạm thời để tránh mất mát dữ liệu tức thời trên Serverless
+let globalDatabase = {
+    users: {},
+    whitelist: {},
+    blacklist: {}
+};
+
+// Vẫn giữ lại cấu hình file dự phòng cho môi trường chạy Local (nếu có)
 const TMP_DIR = os.tmpdir();
 const USERS_FILE = path.join(TMP_DIR, 'users.json');
 const WHITELIST_FILE = path.join(TMP_DIR, 'whitelist.json');
@@ -28,23 +35,32 @@ app.use((req, res, next) => {
     next();
 });
 
-// Khởi tạo các file database tạm thời nếu chưa tồn tại
-if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '{}', 'utf8');
-if (!fs.existsSync(WHITELIST_FILE)) fs.writeFileSync(WHITELIST_FILE, '{}', 'utf8');
-if (!fs.existsSync(BLACKLIST_FILE)) fs.writeFileSync(BLACKLIST_FILE, '{}', 'utf8');
+// Hàm đồng bộ và ghi nhớ dữ liệu an toàn
+function loadData() {
+    try {
+        if (fs.existsSync(USERS_FILE)) globalDatabase.users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+        if (fs.existsSync(WHITELIST_FILE)) globalDatabase.whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
+        if (fs.existsSync(BLACKLIST_FILE)) globalDatabase.blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
+    } catch (e) { console.log("Khởi tạo bộ lưu trữ dữ liệu"); }
+}
+
+function saveData() {
+    try {
+        fs.writeFileSync(USERS_FILE, JSON.stringify(globalDatabase.users, null, 2), 'utf8');
+        fs.writeFileSync(WHITELIST_FILE, JSON.stringify(globalDatabase.whitelist, null, 2), 'utf8');
+        fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(globalDatabase.blacklist, null, 2), 'utf8');
+    } catch (e) { console.error("Lỗi đồng bộ dữ liệu"); }
+}
+
+// Tải dữ liệu ban đầu
+loadData();
 
 function isWhitelisted(userId) {
-    try {
-        const whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
-        return whitelist.hasOwnProperty(userId);
-    } catch { return false; }
+    return globalDatabase.whitelist.hasOwnProperty(userId);
 }
 
 function isBlacklisted(userId) {
-    try {
-        const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
-        return blacklist.hasOwnProperty(userId);
-    } catch { return false; }
+    return globalDatabase.blacklist.hasOwnProperty(userId);
 }
 
 // 📦 API PHÂN PHỐI BYTEBUFFER LOCAL
@@ -104,14 +120,13 @@ app.get('/callback', async (req, res) => {
             `);
         }
 
-        let usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-        if (!usersData[userData.id]) {
-            usersData[userData.id] = {
+        if (!globalDatabase.users[userData.id]) {
+            globalDatabase.users[userData.id] = {
                 username: userData.username,
                 approved: false, 
                 time: new Date().toLocaleString()
             };
-            fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
+            saveData();
         }
 
         res.send(`
@@ -125,10 +140,10 @@ app.get('/callback', async (req, res) => {
                         type: 'DISCORD_LOGIN_SUCCESS',
                         id: '${userData.id}',
                         username: '${userData.username}',
-                        avatar: '${avatarUrl}'
+                        avatar: '${avatarUrl}',
+                        approved: ${isWhitelisted(userData.id) || (globalDatabase.users[userData.id] && globalDatabase.users[userData.id].approved === true)}
                     };
                     if (window.opener) {
-                        // Thay thế '*' bằng origin cụ thể để tăng tính bảo mật bảo vệ token dữ liệu
                         window.opener.postMessage(authData, 'https://zombs.io');
                         window.close();
                     } else {
@@ -155,13 +170,8 @@ app.get('/api/heartbeat', (req, res) => {
         return res.json({ approved: true });
     }
 
-    try {
-        const usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-        if (usersData[userId] && usersData[userId].approved === true) {
-            return res.json({ approved: true });
-        }
-    } catch (e) {
-        console.error("Lỗi đọc cấu trúc dữ liệu người dùng:", e);
+    if (globalDatabase.users[userId] && globalDatabase.users[userId].approved === true) {
+        return res.json({ approved: true });
     }
 
     res.json({ approved: false, blacklist: false });
@@ -175,15 +185,13 @@ app.get('/api/check-user', (req, res) => {
         return res.json({ approved: false, blacklist: true, message: "Bị thu hồi quyền vĩnh viễn!" });
     }
 
-    let usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-
     if (isWhitelisted(userId)) {
-        if (!usersData[userId]) usersData[userId] = { username: "User Whitelist", time: new Date().toLocaleString() };
-        usersData[userId].approved = true;
-        fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
+        if (!globalDatabase.users[userId]) globalDatabase.users[userId] = { username: "User Whitelist", time: new Date().toLocaleString() };
+        globalDatabase.users[userId].approved = true;
+        saveData();
     }
 
-    if (usersData[userId] && usersData[userId].approved === true) {
+    if (globalDatabase.users[userId] && globalDatabase.users[userId].approved === true) {
         if (fs.existsSync(HACK_SCRIPT_PATH)) {
             return res.json({ approved: true, script: fs.readFileSync(HACK_SCRIPT_PATH, 'utf8') });
         }
@@ -204,13 +212,9 @@ app.get('/admin', (req, res) => {
         `);
     }
 
-    const usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-    const whitelistData = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
-    const blacklistData = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
-
     let rowsUsers = '';
-    for (const [id, user] of Object.entries(usersData)) {
-        if (blacklistData.hasOwnProperty(id)) continue;
+    for (const [id, user] of Object.entries(globalDatabase.users)) {
+        if (globalDatabase.blacklist.hasOwnProperty(id)) continue;
 
         const badgeColor = user.approved ? 'success' : 'secondary';
         const badgeText = user.approved ? 'Đã cấp quyền' : 'Chờ duyệt';
@@ -230,12 +234,12 @@ app.get('/admin', (req, res) => {
     }
 
     let rowsWhitelist = '';
-    for (const [id, name] of Object.entries(whitelistData)) {
+    for (const [id, name] of Object.entries(globalDatabase.whitelist)) {
         rowsWhitelist += `<tr class="table-info"><td><code>${id}</code></td><td><b>👑 ${name}</b></td><td><button class="btn btn-danger btn-sm fw-bold" onclick="removeFromWhitelist('${id}')">🚫 GỠ VIP</button></td></tr>`;
     }
 
     let rowsBlacklist = '';
-    for (const [id, name] of Object.entries(blacklistData)) {
+    for (const [id, name] of Object.entries(globalDatabase.blacklist)) {
         rowsBlacklist += `<tr class="table-danger text-dark"><td><code>${id}</code></td><td><b>💀 ${name}</b></td><td><button class="btn btn-success btn-sm fw-bold" onclick="unbanUser('${id}')">Ân Xá</button></td></tr>`;
     }
 
@@ -344,10 +348,9 @@ app.post('/api/toggle-approve', (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
     
     const userId = req.body.id;
-    let usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-    if (usersData[userId]) { 
-        usersData[userId].approved = !usersData[userId].approved; 
-        fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8'); 
+    if (globalDatabase.users[userId]) { 
+        globalDatabase.users[userId].approved = !globalDatabase.users[userId].approved; 
+        saveData();
     }
     res.json({ success: true });
 });
@@ -356,15 +359,12 @@ app.post('/api/manage-whitelist', (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
 
     const { id, name, action } = req.body;
-    let whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
-    let usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-    if (action === 'add') whitelist[id] = name;
+    if (action === 'add') globalDatabase.whitelist[id] = name;
     else if (action === 'remove') { 
-        delete whitelist[id]; 
-        if (usersData[id]) usersData[id].approved = false; 
+        delete globalDatabase.whitelist[id]; 
+        if (globalDatabase.users[id]) globalDatabase.users[id].approved = false; 
     }
-    fs.writeFileSync(WHITELIST_FILE, JSON.stringify(whitelist, null, 2), 'utf8');
-    fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
+    saveData();
     res.json({ success: true });
 });
 
@@ -372,18 +372,15 @@ app.post('/api/manage-blacklist', (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
 
     const { id, name, action } = req.body;
-    let blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
-    let usersData = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
 
     if (action === 'ban') {
-        blacklist[id] = name || "Bị cấm";
-        if (usersData[id]) usersData[id].approved = false; 
+        globalDatabase.blacklist[id] = name || "Bị cấm";
+        if (globalDatabase.users[id]) globalDatabase.users[id].approved = false; 
     } else if (action === 'unban') {
-        delete blacklist[id];
+        delete globalDatabase.blacklist[id];
     }
 
-    fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(blacklist, null, 2), 'utf8');
-    fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
+    saveData();
     res.json({ success: true });
 });
 
