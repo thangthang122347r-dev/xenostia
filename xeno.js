@@ -6,7 +6,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { MongoClient } = require('mongodb'); // Thêm driver MongoDB
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
@@ -26,17 +26,23 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🗄️ CẤU HÌNH VÀ KẾT NỐI MONGODB
+// 🗄️ CẤU HÌNH KẾT NỐI MONGODB TỐI ƯU CHO SERVERLESS
 const client = new MongoClient(process.env.MONGODB_URI);
-let db, configCollection;
+let cachedDb = null;
+let cachedCollection = null;
 
-async function initDB() {
+async function connectDB() {
+    // Nếu đã có kết nối trong Cache, dùng lại luôn để tiết kiệm thời gian
+    if (cachedDb && cachedCollection) {
+        return { db: cachedDb, configCollection: cachedCollection };
+    }
+
     try {
         await client.connect();
-        db = client.db('xenostia_db');
-        configCollection = db.collection('system_data');
+        const db = client.db('xenostia_db');
+        const configCollection = db.collection('system_data');
         
-        // Khởi tạo document gốc nếu database trống
+        // Khởi tạo tài liệu cấu hình mặc định nếu database trống
         const existing = await configCollection.findOne({ _id: 'main_config' });
         if (!existing) {
             await configCollection.insertOne({
@@ -45,21 +51,28 @@ async function initDB() {
                 whitelist: {},
                 blacklist: {}
             });
-            console.log("👉 Đã khởi tạo dữ liệu mặc định trên MongoDB");
+            console.log("👉 Đã tạo dữ liệu gốc trên MongoDB");
         }
-        console.log("✅ Kết nối thành công MongoDB!");
+
+        // Lưu vào cache
+        cachedDb = db;
+        cachedCollection = configCollection;
+        
+        return { db, configCollection };
     } catch (err) {
-        console.error("❌ Lỗi kết nối MongoDB:", err);
+        console.error("❌ Thất bại khi kết nối MongoDB:", err);
+        throw err;
     }
 }
-initDB();
 
-// 🔄 HÀM TRỢ GIÚP: ĐỌC / GHI CHO GIỐNG LOGIC FILE CŨ CỦA ÔNG
+// 🔄 ĐẢM BẢO CÁC HÀM TRỢ GIÚP ĐỀU PHẢI ĐỢI KẾT NỐI DB XONG
 async function getSystemData() {
+    const { configCollection } = await connectDB();
     return await configCollection.findOne({ _id: 'main_config' });
 }
 
 async function updateSystemData(newData) {
+    const { configCollection } = await connectDB();
     await configCollection.updateOne({ _id: 'main_config' }, { $set: newData });
 }
 
