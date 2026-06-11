@@ -440,7 +440,6 @@ app.get('/admin', async (req, res) => {
     </body>
     </html>`);
 });
-// 🔮 API HIỂN THỊ CHANGELOG ĐA NGÔN NGỮ (Cho người dùng xem công khai)
 app.get('/changelog', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -476,31 +475,6 @@ app.get('/changelog', (req, res) => {
                 border-radius: 12px;
                 padding: 30px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            }
-
-            /* Widget Đếm Ngược */
-            .countdown-box {
-                background: #1a1a22;
-                border: 1px dashed #ffaa00;
-                border-radius: 8px;
-                padding: 15px;
-                text-align: center;
-                margin-bottom: 25px;
-            }
-
-            .countdown-title {
-                font-size: 0.9rem;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                margin-bottom: 8px;
-            }
-
-            .countdown-values {
-                font-family: 'Hammersmith One', sans-serif;
-                font-size: 1.6rem;
-                color: #ffaa00;
-                text-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
             }
 
             /* Bộ chọn ngôn ngữ tiện lợi */
@@ -586,17 +560,13 @@ app.get('/changelog', (req, res) => {
     <body>
 
         <div class="container">
-            <div class="countdown-box">
-                <div class="countdown-title" id="countdown-label">🚀 Thời gian ra mắt phiên bản mới</div>
-                <div class="countdown-values" id="timer">00đ 00g 00p 00s</div>
-            </div>
-
             <div class="lang-selector">
                 <button class="lang-btn active" onclick="switchLang('vi')">Tiếng Việt</button>
                 <button class="lang-btn" onclick="switchLang('en')">English</button>
                 <button class="lang-btn" onclick="switchLang('hk')">繁體中文</button>
             </div>
 
+            <!-- TIẾNG VIỆT -->
             <div id="lang-vi" class="changelog-content active">
                 <h2 class="shimmer-title">📋 Nhật Ký Thay Đổi</h2>
                 <p><strong>🧩 Ngày cập nhật:</strong> 08/06/2026</p>
@@ -643,6 +613,7 @@ app.get('/changelog', (req, res) => {
                 </ul>
             </div>
 
+            <!-- ENGLISH -->
             <div id="lang-en" class="changelog-content">
                 <h2 class="shimmer-title">📋 Changelog</h2>
                 <p><strong>🧩 Update Date:</strong> 08/06/2026</p>
@@ -689,6 +660,7 @@ app.get('/changelog', (req, res) => {
                 </ul>
             </div>
 
+            <!-- HONG KONG (繁體中文) -->
             <div id="lang-hk" class="changelog-content">
                 <h2 class="shimmer-title">📋 更新日誌</h2>
                 <p><strong>🧩 更新日期:</strong> 08/06/2026</p>
@@ -727,7 +699,7 @@ app.get('/changelog', (req, res) => {
                     <li>改進觀戰模式 (Spectate mode)</li>
                     <li>改進分帳自動復活功能 (Auto respawn alt)</li>
                     <li>已修復炸彈、長槍、弓箭的 Xkey (需要開啟 auto respawn 以便分帳購買弓箭)</li>
-                    <li>移成了進入伺服器時的 HUD intro 歡迎通知</li>
+                    <li>移除了進入伺服器時的 HUD intro 歡迎通知</li>
                 </ul>
                 <p><strong>🔮 即將推出:</strong></p>
                 <ul>
@@ -737,53 +709,20 @@ app.get('/changelog', (req, res) => {
         </div>
 
         <script>
-            // Định nghĩa chuỗi text đa ngôn ngữ cho tiêu đề Countdown
-            const langLabels = {
-                vi: "🚀 Thời gian ra mắt phiên bản mới",
-                en: "🚀 Time remaining until official launch",
-                hk: "🚀 距離官方正式發佈還有"
-            };
-
             function switchLang(langCode) {
+                // 1. Ẩn tất cả các tab nội dung
                 document.querySelectorAll('.changelog-content').forEach(el => {
                     el.classList.remove('active');
                 });
+                // 2. Tắt trạng thái active của tất cả các nút bấm
                 document.querySelectorAll('.lang-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 
+                // 3. Hiển thị tab và kích hoạt nút tương ứng
                 document.getElementById('lang-' + langCode).classList.add('active');
                 event.currentTarget.classList.add('active');
-
-                // Thay đổi tiêu đề đếm ngược theo ngôn ngữ được chọn
-                document.getElementById('countdown-label').innerText = langLabels[langCode] || langLabels['vi'];
             }
-
-            // Xử lý đếm ngược (Mốc thời gian Thứ 2 tuần sau: 15/06/2026 00:00:00)
-            const targetDate = new Date("June 15, 2026 00:00:00").getTime();
-
-            const timerInterval = setInterval(function() {
-                const now = new Date().getTime();
-                const distance = targetDate - now;
-
-                if (distance < 0) {
-                    clearInterval(timerInterval);
-                    document.getElementById("timer").innerHTML = "🎉 RELEASED / ĐÃ RA MẮT 🎉";
-                    return;
-                }
-
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                // Định dạng hiển thị trực quan
-                document.getElementById("timer").innerHTML = 
-                    (days > 0 ? days + "đ " : "") + 
-                    (hours < 10 ? "0" + hours : hours) + "g " + 
-                    (minutes < 10 ? "0" + minutes : minutes) + "p " + 
-                    (seconds < 10 ? "0" + seconds : seconds) + "s";
-            }, 1000);
         </script>
     </body>
     </html>
