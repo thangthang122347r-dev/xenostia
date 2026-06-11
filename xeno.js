@@ -440,7 +440,247 @@ app.get('/admin', async (req, res) => {
     </body>
     </html>`);
 });
+// 🔮 API HIỂN THỊ CHANGELOG ĐA NGÔN NGỮ (Cho người dùng xem công khai)
+app.get('/changelog', (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Xenostia - Changelog</title>
+        <link href="https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Lexend:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            @keyframes changelogShimmer {
+                0% { background-position: 0% 50% !important; }
+                100% { background-position: 100% 50% !important; }
+            }
 
+            body {
+                background-color: #0c0c0e;
+                color: #e2e8f0;
+                font-family: 'Lexend', sans-serif;
+                margin: 0;
+                padding: 40px 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+            }
+
+            .container {
+                max-width: 650px;
+                width: 100%;
+                background: #141418;
+                border: 1px solid #22222a;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            }
+
+            /* Bộ chọn ngôn ngữ tiện lợi */
+            .lang-selector {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 25px;
+            }
+
+            .lang-btn {
+                background: #1e1e24;
+                border: 1px solid #33333c;
+                color: #94a3b8;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-family: 'Lexend', sans-serif;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+
+            .lang-btn:hover {
+                border-color: #ffaa00;
+                color: #fff;
+            }
+
+            .lang-btn.active {
+                background: #ffaa00;
+                color: #000;
+                border-color: #ffaa00;
+                font-weight: 600;
+                box-shadow: 0 0 12px rgba(255, 170, 0, 0.3);
+            }
+
+            /* Khung nội dung Changelog */
+            .changelog-content {
+                display: none;
+                line-height: 1.6;
+            }
+
+            .changelog-content.active {
+                display: block;
+            }
+
+            /* Tiêu đề Shimmer lấp lánh đặc trưng */
+            .shimmer-title {
+                text-align: center; 
+                color: #ffffff; 
+                font-family: 'Hammersmith One', sans-serif;
+                padding: 10px 25px;
+                margin: 15px auto 25px auto;
+                border-radius: 8px;
+                -webkit-text-stroke: 1.2px #ffffff;
+                text-stroke: 1.2px #ffffff;
+                display: table !important; 
+                background: linear-gradient(110deg, #050505 0%, #1a1a1a 35%, rgba(255, 255, 255, 0.75) 50%, #333333 65%, #4a4a4a 100%) !important;
+                background-size: 300% 100% !important;
+                animation: changelogShimmer 2.5s ease-in-out infinite alternate !important;
+            }
+
+            hr {
+                border: 0;
+                height: 1px;
+                background: #2d2d3a;
+                margin: 20px 0;
+            }
+
+            ul {
+                padding-left: 20px;
+            }
+
+            li {
+                margin-bottom: 8px;
+                color: #cbd5e1;
+            }
+
+            strong {
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="container">
+            <div class="lang-selector">
+                <button class="lang-btn active" onclick="switchLang('vi')">Tiếng Việt</button>
+                <button class="lang-btn" onclick="switchLang('en')">English</button>
+                <button class="lang-btn" onclick="switchLang('hk')">繁體中文</button>
+            </div>
+
+            <div id="lang-vi" class="changelog-content active">
+                <h2 class="shimmer-title">📋 Nhật Ký Thay Đổi</h2>
+                <p><strong>🧩 Ngày cập nhật:</strong> 6/6/2026</p>
+                <p><strong>📏 Số dòng lệnh đạt được:</strong> 8,392 lines</p>
+                <hr>
+                <p><strong>🔧 Sửa lỗi & Tối ưu:</strong></p>
+                <ul>
+                    <li>Đã sửa lỗi hiển thị số lượng người chơi trên server (server population)</li>
+                    <li>Alts (Đã sửa xong hoàn toàn)</li>
+                    <li>Sửa lỗi hiển thị Spear cho tài khoản phụ (alts)</li>
+                    <li>Đã fix lỗi bộ dựng hình (renderer bug)</li>
+                    <li>Sửa lỗi WASM trên tài khoản phụ (wasm alt)</li>
+                    <li>Chuyển đổi hiệu ứng thông báo từ "phải sang trái" thành "từ trên xuống"</li>
+                    <li>Sửa lỗi hiển thị zoom, số lượng trên các alts</li>
+                    <li>Đã tối ưu hóa WASM giúp alts truyền tải dữ liệu mượt mà vượt trội</li>
+                    <li>Xóa tài khoản phụ (alt) giờ đây tốc độ xử lý phản hồi tức thì!</li>
+                    <li>Sửa triệt để lỗi mất kết nối (disconnect) gây đơ toàn bộ màn hình</li>
+                </ul>
+                <p><strong>✨ Tính năng mới:</strong></p>
+                <ul>
+                    <li>Thêm tính năng mới cốt lõi: <b>UTH Feature</b></li>
+                    <li>Tính năng mới: Đã hỗ trợ xem trực tiếp nguyên liệu của alts ngay trong cài đặt</li>
+                    <li>Đã xóa bỏ hoàn toàn 'send res alts' để tập trung tối ưu qua menu settings</li>
+                    <li>Bổ sung tùy chọn click chuột để thoát menu khẩn cấp khi bị kẹt giao diện</li>
+                </ul>
+                <p><strong>🔮 Dự kiến sắp tới:</strong></p>
+                <ul>
+                    <li>Hệ thống quản lý phiên làm việc / Session system (Đang nghiên cứu giải pháp do độ khó cao)</li>
+                </ul>
+            </div>
+
+            <div id="lang-en" class="changelog-content">
+                <h2 class="shimmer-title">📋 Changelog</h2>
+                <p><strong>🧩 Update Date:</strong> 6/6/2026</p>
+                <p><strong>📏 Code Lines Reached:</strong> 8,392 lines</p>
+                <hr>
+                <p><strong>🔧 Fixes & Optimization:</strong></p>
+                <ul>
+                    <li>Fixed bug on server population status</li>
+                    <li>Alts (Fully Resolved)</li>
+                    <li>Fixed Spear display bug for alternative accounts</li>
+                    <li>Fixed renderer canvas error</li>
+                    <li>Fixed WASM module error on alts</li>
+                    <li>Changed notification animation from right-to-left to top-down sliding</li>
+                    <li>Fixed zoom scale and metric counter displays on alts</li>
+                    <li>Optimized WebAssembly transmission for smoother alt data streaming</li>
+                    <li>Deleting alts is now heavily optimized, virtually instant!</li>
+                    <li>Fixed annoying screen freezing bug upon server disconnection</li>
+                </ul>
+                <p><strong>✨ New Features:</strong></p>
+                <ul>
+                    <li>Added brand new UTH feature module</li>
+                    <li>Added advanced ability to inspect alternative accounts' materials directly in settings</li>
+                    <li>Deprecate and removed 'send res alts' to fully utilize centralized dashboard settings</li>
+                    <li>Added emergency click-to-exit handler if getting trapped inside menus</li>
+                </ul>
+                <p><strong>🔮 Coming Soon:</strong></p>
+                <ul>
+                    <li>Session storage state system (Highly experimental / complex development)</li>
+                </ul>
+            </div>
+
+            <div id="lang-hk" class="changelog-content">
+                <h2 class="shimmer-title">📋 更新日誌</h2>
+                <p><strong>🧩 更新日期:</strong> 6/6/2026</p>
+                <p><strong>📏 代碼行數已達:</strong> 8,392 行</p>
+                <hr>
+                <p><strong>🔧 修正與優化:</strong></p>
+                <ul>
+                    <li>修復伺服器人數顯示錯誤 (server population)</li>
+                    <li>Alts 分帳系統 (已全面修復完成)</li>
+                    <li>修復分帳 (alts) 的 Spear 武器顯示錯誤</li>
+                    <li>已成功修復渲染器錯誤 (renderer bug)</li>
+                    <li>修復分帳中的 WASM 模組異常 (wasm alt error)</li>
+                    <li>將通知載入動畫從「右至左」調整為「自上而下」</li>
+                    <li>修復分帳畫面的縮放與各項數據顯示錯誤</li>
+                    <li>深度優化 WASM，讓分帳數據傳輸與同步更為流暢</li>
+                    <li>刪除分帳速度全面優化，幾乎在瞬間即可完成！</li>
+                    <li>徹底修復斷線時會造成整體遊戲畫面卡死、凍結的問題</li>
+                </ul>
+                <p><strong>✨ 新功能:</strong></p>
+                <ul>
+                    <li>新增全新核心功能：UTH 功能</li>
+                    <li>新功能：現在已可在控制設定面板中直接查看分帳持有的材料</li>
+                    <li>已正式移除舊版 'send res alts'，全面轉向整合設定模組</li>
+                    <li>新增當菜單不慎卡住時，可透過點擊任意處強行退出的防卡功能</li>
+                </ul>
+                <p><strong>🔮 即將推出:</strong></p>
+                <ul>
+                    <li>多會話核心系統 / Session system (難度極高，正全力研發中)</li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            function switchLang(langCode) {
+                // 1. Ẩn tất cả các tab nội dung
+                document.querySelectorAll('.changelog-content').forEach(el => {
+                    el.classList.remove('active');
+                });
+                // 2. Tắt trạng thái active của tất cả các nút bấm
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 3. Hiển thị tab và kích hoạt nút tương ứng
+                document.getElementById('lang-' + langCode).classList.add('active');
+                event.currentTarget.classList.add('active');
+            }
+        </script>
+    </body>
+    </html>
+    `);
+});
 // 🛠️ API ĐIỀU CHỈNH CẤU HÌNH HỆ THỐNG
 app.post('/api/system-settings', async (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
