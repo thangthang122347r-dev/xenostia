@@ -569,7 +569,7 @@ app.get('/changelog', (req, res) => {
             <!-- TIẾNG VIỆT -->
             <div id="lang-vi" class="changelog-content active">
                 <h2 class="shimmer-title">📋 Nhật Ký Thay Đổi</h2>
-                <p><strong>🧩 Ngày cập nhật:</strong> 08/06/2026</p>
+                <p><strong>🧩 Ngày cập nhật:</strong> 11/06/2026</p>
                 <p><strong>📏 Số dòng lệnh đạt được:</strong> 9294+ lines</p>
                 <hr>
                 <p><strong>🔧 Sửa lỗi & Tối ưu hóa:</strong></p>
@@ -616,7 +616,7 @@ app.get('/changelog', (req, res) => {
             <!-- ENGLISH -->
             <div id="lang-en" class="changelog-content">
                 <h2 class="shimmer-title">📋 Changelog</h2>
-                <p><strong>🧩 Update Date:</strong> 08/06/2026</p>
+                <p><strong>🧩 Update Date:</strong> 11/06/2026</p>
                 <p><strong>📏 Code Lines Reached:</strong> 9294+ lines</p>
                 <hr>
                 <p><strong>🔧 Fixes & Optimization:</strong></p>
@@ -663,7 +663,7 @@ app.get('/changelog', (req, res) => {
             <!-- HONG KONG (繁體中文) -->
             <div id="lang-hk" class="changelog-content">
                 <h2 class="shimmer-title">📋 更新日誌</h2>
-                <p><strong>🧩 更新日期:</strong> 08/06/2026</p>
+                <p><strong>🧩 更新日期:</strong> 11/06/2026</p>
                 <p><strong>📏 代碼行數已達:</strong> 9294+ 行</p>
                 <hr>
                 <p><strong>🔧 修正與優化:</strong></p>
