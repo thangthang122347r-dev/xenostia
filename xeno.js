@@ -478,6 +478,31 @@ app.get('/changelog', (req, res) => {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             }
 
+            /* Widget Đếm Ngược */
+            .countdown-box {
+                background: #1a1a22;
+                border: 1px dashed #ffaa00;
+                border-radius: 8px;
+                padding: 15px;
+                text-align: center;
+                margin-bottom: 25px;
+            }
+
+            .countdown-title {
+                font-size: 0.9rem;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 8px;
+            }
+
+            .countdown-values {
+                font-family: 'Hammersmith One', sans-serif;
+                font-size: 1.6rem;
+                color: #ffaa00;
+                text-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+            }
+
             /* Bộ chọn ngôn ngữ tiện lợi */
             .lang-selector {
                 display: flex;
@@ -561,6 +586,11 @@ app.get('/changelog', (req, res) => {
     <body>
 
         <div class="container">
+            <div class="countdown-box">
+                <div class="countdown-title" id="countdown-label">🚀 Thời gian ra mắt phiên bản mới</div>
+                <div class="countdown-values" id="timer">00đ 00g 00p 00s</div>
+            </div>
+
             <div class="lang-selector">
                 <button class="lang-btn active" onclick="switchLang('vi')">Tiếng Việt</button>
                 <button class="lang-btn" onclick="switchLang('en')">English</button>
@@ -569,113 +599,191 @@ app.get('/changelog', (req, res) => {
 
             <div id="lang-vi" class="changelog-content active">
                 <h2 class="shimmer-title">📋 Nhật Ký Thay Đổi</h2>
-                <p><strong>🧩 Ngày cập nhật:</strong> 6/6/2026</p>
-                <p><strong>📏 Số dòng lệnh đạt được:</strong> 8,392 lines</p>
+                <p><strong>🧩 Ngày cập nhật:</strong> 08/06/2026</p>
+                <p><strong>📏 Số dòng lệnh đạt được:</strong> 9294+ lines</p>
                 <hr>
-                <p><strong>🔧 Sửa lỗi & Tối ưu:</strong></p>
+                <p><strong>🔧 Sửa lỗi & Tối ưu hóa:</strong></p>
                 <ul>
-                    <li>Đã sửa lỗi hiển thị số lượng người chơi trên server (server population)</li>
-                    <li>Alts (Đã sửa xong hoàn toàn)</li>
-                    <li>Sửa lỗi hiển thị Spear cho tài khoản phụ (alts)</li>
-                    <li>Đã fix lỗi bộ dựng hình (renderer bug)</li>
-                    <li>Sửa lỗi WASM trên tài khoản phụ (wasm alt)</li>
-                    <li>Chuyển đổi hiệu ứng thông báo từ "phải sang trái" thành "từ trên xuống"</li>
-                    <li>Sửa lỗi hiển thị zoom, số lượng trên các alts</li>
-                    <li>Đã tối ưu hóa WASM giúp alts truyền tải dữ liệu mượt mà vượt trội</li>
-                    <li>Xóa tài khoản phụ (alt) giờ đây tốc độ xử lý phản hồi tức thì!</li>
-                    <li>Sửa triệt để lỗi mất kết nối (disconnect) gây đơ toàn bộ màn hình</li>
+                    <li>[MỚI] Sửa lỗi hệ thống quét máy chủ (server scanner)</li>
+                    <li>Sửa lỗi hiển thị số lượng người chơi trên server (server population)</li>
+                    <li>Sửa lỗi hệ thống tài khoản phụ (Alts) và lỗi hiển thị HUD của Alts</li>
+                    <li>Sửa lỗi hiển thị Thương (Spear) khi chơi alts</li>
+                    <li>Xử lý triệt để lỗi bộ dựng hình (renderer bug) và lỗi WASM trên tài khoản phụ</li>
+                    <li>Chuyển đổi hiệu ứng thông báo từ "phải sang trái" thành "từ trên xuống" cho mượt hơn</li>
+                    <li>Sửa lỗi hiển thị thu phóng (zoom) và hiển thị các con số trên alts</li>
+                    <li>Tối ưu hóa WASM giúp alts truyền tải dữ liệu mượt mà, không bị delay</li>
+                    <li>Xóa tài khoản phụ (Alt) giờ đây cực nhanh, gần như tức thì!</li>
+                    <li>Sửa lỗi mất kết nối (disconnect) gây đơ hoặc văng/sập màn hình</li>
+                    <li>Sửa giới hạn RAM (RAM limit) giúp tối ưu hóa hiệu năng toàn hệ thống</li>
+                    <li>Tối ưu cấu trúc HTML của giao diện cửa hàng (Shop Layout)</li>
+                    <li>Sửa lỗi phím bấm nhanh (Xkey) cho bom (Bomb), cung (Bow) và thương (Spear)</li>
+                    <li>Sửa lỗi và cải tiến hệ thống tự động ngắm (Aim assist)</li>
                 </ul>
                 <p><strong>✨ Tính năng mới:</strong></p>
                 <ul>
-                    <li>Thêm tính năng mới cốt lõi: <b>UTH Feature</b></li>
-                    <li>Tính năng mới: Đã hỗ trợ xem trực tiếp nguyên liệu của alts ngay trong cài đặt</li>
-                    <li>Đã xóa bỏ hoàn toàn 'send res alts' để tập trung tối ưu qua menu settings</li>
-                    <li>Bổ sung tùy chọn click chuột để thoát menu khẩn cấp khi bị kẹt giao diện</li>
+                    <li>Tích hợp tính năng mới UTH</li>
+                    <li>Đã có thể trực tiếp theo dõi nguyên liệu/tài nguyên của alts ngay trong phần Cài đặt (Settings)</li>
+                    <li>Gỡ bỏ tùy chọn cũ 'send res alts' để tối ưu hóa hoàn toàn không gian menu Cài đặt</li>
+                    <li>Thêm cơ chế click để tự thoát menu nhanh khi bị kẹt giao diện</li>
+                    <li>Thêm hiệu ứng viền màn hình nhấp nháy đỏ khi rơi vào trạng thái thấp máu (Low heart effect)</li>
+                    <li>Cấu trúc lại toàn bộ HTML của thanh máu (Health) và giáp (Shield) để tối ưu hiển thị</li>
+                    <li>Thay đổi cách hiển thị chỉ số server (Server stats) trực quan, chi tiết và rõ ràng hơn</li>
+                    <li>Thêm tính năng tự động mua thương khi đi raid riêng cho chế độ 1b1 (Auto buy spear raid for 1b1)</li>
+                    <li>Bổ sung hàm helper xử lý khoảng giữa uth và ahrc</li>
+                    <li>Thêm tính năng phím ] dành riêng cho raid 1b1 alt</li>
+                    <li>Tính năng chọn map sẽ di chuyển tới khu vực đó</li>
+                    <li>Cải thiện chế độ Spectate (Spectate mode)</li>
+                    <li>Cải thiện tính năng tự động hồi sinh alt (Auto respawn alt)</li>
+                    <li>Đã fix xkey bomb, spear, bow (Cần bật auto respawn để alt tự mua bow)</li>
+                    <li>Xóa bỏ thông báo HUD intro khi vào server</li>
                 </ul>
-                <p><strong>🔮 Dự kiến sắp tới:</strong></p>
+                <p><strong>🔮 Sắp ra mắt:</strong></p>
                 <ul>
-                    <li>Hệ thống quản lý phiên làm việc / Session system (Đang nghiên cứu giải pháp do độ khó cao)</li>
+                    <li>Hệ thống phiên làm việc / Session system (quá khó)</li>
                 </ul>
             </div>
 
             <div id="lang-en" class="changelog-content">
                 <h2 class="shimmer-title">📋 Changelog</h2>
-                <p><strong>🧩 Update Date:</strong> 6/6/2026</p>
-                <p><strong>📏 Code Lines Reached:</strong> 8,392 lines</p>
+                <p><strong>🧩 Update Date:</strong> 08/06/2026</p>
+                <p><strong>📏 Code Lines Reached:</strong> 9294+ lines</p>
                 <hr>
                 <p><strong>🔧 Fixes & Optimization:</strong></p>
                 <ul>
-                    <li>Fixed bug on server population status</li>
-                    <li>Alts (Fully Resolved)</li>
-                    <li>Fixed Spear display bug for alternative accounts</li>
-                    <li>Fixed renderer canvas error</li>
-                    <li>Fixed WASM module error on alts</li>
-                    <li>Changed notification animation from right-to-left to top-down sliding</li>
-                    <li>Fixed zoom scale and metric counter displays on alts</li>
-                    <li>Optimized WebAssembly transmission for smoother alt data streaming</li>
-                    <li>Deleting alts is now heavily optimized, virtually instant!</li>
-                    <li>Fixed annoying screen freezing bug upon server disconnection</li>
+                    <li>[NEW] Fixed server scanner system</li>
+                    <li>Fixed server population display bug</li>
+                    <li>Fixed Alts system and Alts HUD display issues</li>
+                    <li>Fixed Spear display bug when playing on alts</li>
+                    <li>Completely resolved renderer bug and WASM errors on alts</li>
+                    <li>Changed notification animation from right-to-left to top-down for smoother transition</li>
+                    <li>Fixed zoom and number display issues on alts</li>
+                    <li>Optimized WASM for smoother alt data transmission without delay</li>
+                    <li>Deleting alts is now extremely fast, practically instant!</li>
+                    <li>Fixed disconnection issues causing screen freezing or crashes</li>
+                    <li>Fixed RAM limit to optimize entire system performance</li>
+                    <li>Optimized HTML structure for the Shop Layout</li>
+                    <li>Fixed quick-key (Xkey) for Bomb, Bow, and Spear</li>
+                    <li>Fixed and improved Aim Assist system</li>
                 </ul>
                 <p><strong>✨ New Features:</strong></p>
                 <ul>
-                    <li>Added brand new UTH feature module</li>
-                    <li>Added advanced ability to inspect alternative accounts' materials directly in settings</li>
-                    <li>Deprecate and removed 'send res alts' to fully utilize centralized dashboard settings</li>
-                    <li>Added emergency click-to-exit handler if getting trapped inside menus</li>
+                    <li>Integrated new UTH feature</li>
+                    <li>Added ability to track alt materials/resources directly in Settings</li>
+                    <li>Removed 'send res alts' option to fully optimize Settings menu space</li>
+                    <li>Added a click-to-exit option to quickly close the interface if stuck</li>
+                    <li>Added low health border flashing red effect (Low heart effect)</li>
+                    <li>Restructured entire HTML for Health and Shield bars for optimal display</li>
+                    <li>Changed server stats display to be more intuitive, detailed, and clear</li>
+                    <li>Added auto-buy spear for raids, exclusively for 1b1 mode</li>
+                    <li>Added helper function to handle the gap between UTH and AHRC</li>
+                    <li>Added ] hotkey feature dedicated to 1b1 alt raids</li>
+                    <li>Map selection feature now teleports to the selected area</li>
+                    <li>Improved Spectate mode</li>
+                    <li>Improved auto-respawn for alts</li>
+                    <li>Fixed Xkey for Bomb, Spear, and Bow (Requires auto-respawn for alts to buy Bow)</li>
+                    <li>Removed HUD intro notification upon entering the server</li>
                 </ul>
                 <p><strong>🔮 Coming Soon:</strong></p>
                 <ul>
-                    <li>Session storage state system (Highly experimental / complex development)</li>
+                    <li>Session system (too hard)</li>
                 </ul>
             </div>
 
             <div id="lang-hk" class="changelog-content">
                 <h2 class="shimmer-title">📋 更新日誌</h2>
-                <p><strong>🧩 更新日期:</strong> 6/6/2026</p>
-                <p><strong>📏 代碼行數已達:</strong> 8,392 行</p>
+                <p><strong>🧩 更新日期:</strong> 08/06/2026</p>
+                <p><strong>📏 代碼行數已達:</strong> 9294+ 行</p>
                 <hr>
                 <p><strong>🔧 修正與優化:</strong></p>
                 <ul>
+                    <li>[全新] 修復伺服器掃描系統 (server scanner)</li>
                     <li>修復伺服器人數顯示錯誤 (server population)</li>
-                    <li>Alts 分帳系統 (已全面修復完成)</li>
-                    <li>修復分帳 (alts) 的 Spear 武器顯示錯誤</li>
-                    <li>已成功修復渲染器錯誤 (renderer bug)</li>
-                    <li>修復分帳中的 WASM 模組異常 (wasm alt error)</li>
-                    <li>將通知載入動畫從「右至左」調整為「自上而下」</li>
-                    <li>修復分帳畫面的縮放與各項數據顯示錯誤</li>
-                    <li>深度優化 WASM，讓分帳數據傳輸與同步更為流暢</li>
-                    <li>刪除分帳速度全面優化，幾乎在瞬間即可完成！</li>
-                    <li>徹底修復斷線時會造成整體遊戲畫面卡死、凍結的問題</li>
+                    <li>修復分帳系統 (Alts) 及分帳 HUD 顯示錯誤</li>
+                    <li>修復在分帳上遊玩時的長槍 (Spear) 顯示錯誤</li>
+                    <li>徹底解決分帳上的渲染器錯誤 (renderer bug) 及 WASM 錯誤</li>
+                    <li>將通知動畫從「右至左」改為「從上至下」，運作更流暢</li>
+                    <li>修復分帳的縮放與數字顯示錯誤</li>
+                    <li>優化 WASM，讓分帳數據傳輸更流暢、零延遲</li>
+                    <li>刪除分帳速度極快，幾乎瞬間完成！</li>
+                    <li>修復斷線時導致畫面卡死、凍結或崩潰的問題</li>
+                    <li>修正記憶體限制 (RAM limit)，優化全系統效能</li>
+                    <li>優化商店介面 (Shop Layout) 的 HTML 結構</li>
+                    <li>修復炸彈 (Bomb)、弓箭 (Bow) 及長槍 (Spear) 的快捷鍵 (Xkey)</li>
+                    <li>修復並改進自動 aim 輔助系統 (Aim assist)</li>
                 </ul>
                 <p><strong>✨ 新功能:</strong></p>
                 <ul>
-                    <li>新增全新核心功能：UTH 功能</li>
-                    <li>新功能：現在已可在控制設定面板中直接查看分帳持有的材料</li>
-                    <li>已正式移除舊版 'send res alts'，全面轉向整合設定模組</li>
-                    <li>新增當菜單不慎卡住時，可透過點擊任意處強行退出的防卡功能</li>
+                    <li>整合全新 UTH 功能</li>
+                    <li>新增可直接在設定 (Settings) 中查看分帳材料/資源的功能</li>
+                    <li>移除舊有的 'send res alts' 選項，以徹底釋放設定選單空間</li>
+                    <li>新增點擊機制，當介面卡住時可快速強制退出選單</li>
+                    <li>新增低血量時螢幕邊框閃爍紅光的特效 (Low heart effect)</li>
+                    <li>重構血量條 (Health) 與護甲條 (Shield) 的 HTML 結構以優化顯示</li>
+                    <li>改變伺服器數據 (Server stats) 的顯示方式，更直觀、詳細且清晰</li>
+                    <li>新增 1b1 模式專用的突襲自動購買長槍功能 (Auto buy spear raid for 1b1)</li>
+                    <li>新增處理 uth 與 ahrc 之間間距的 helper 函數</li>
+                    <li>新增專屬於 1b1 分帳突襲的 ] 鍵功能</li>
+                    <li>地圖選擇功能現在會直接傳送到該區域</li>
+                    <li>改進觀戰模式 (Spectate mode)</li>
+                    <li>改進分帳自動復活功能 (Auto respawn alt)</li>
+                    <li>已修復炸彈、長槍、弓箭的 Xkey (需要開啟 auto respawn 以便分帳購買弓箭)</li>
+                    <li>移成了進入伺服器時的 HUD intro 歡迎通知</li>
                 </ul>
                 <p><strong>🔮 即將推出:</strong></p>
                 <ul>
-                    <li>多會話核心系統 / Session system (難度極高，正全力研發中)</li>
+                    <li>會話系統 / Session system (太難了)</li>
                 </ul>
             </div>
         </div>
 
         <script>
+            // Định nghĩa chuỗi text đa ngôn ngữ cho tiêu đề Countdown
+            const langLabels = {
+                vi: "🚀 Thời gian ra mắt phiên bản mới",
+                en: "🚀 Time remaining until official launch",
+                hk: "🚀 距離官方正式發佈還有"
+            };
+
             function switchLang(langCode) {
-                // 1. Ẩn tất cả các tab nội dung
                 document.querySelectorAll('.changelog-content').forEach(el => {
                     el.classList.remove('active');
                 });
-                // 2. Tắt trạng thái active của tất cả các nút bấm
                 document.querySelectorAll('.lang-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 
-                // 3. Hiển thị tab và kích hoạt nút tương ứng
                 document.getElementById('lang-' + langCode).classList.add('active');
                 event.currentTarget.classList.add('active');
+
+                // Thay đổi tiêu đề đếm ngược theo ngôn ngữ được chọn
+                document.getElementById('countdown-label').innerText = langLabels[langCode] || langLabels['vi'];
             }
+
+            // Xử lý đếm ngược (Mốc thời gian Thứ 2 tuần sau: 15/06/2026 00:00:00)
+            const targetDate = new Date("June 15, 2026 00:00:00").getTime();
+
+            const timerInterval = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+
+                if (distance < 0) {
+                    clearInterval(timerInterval);
+                    document.getElementById("timer").innerHTML = "🎉 RELEASED / ĐÃ RA MẮT 🎉";
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                // Định dạng hiển thị trực quan
+                document.getElementById("timer").innerHTML = 
+                    (days > 0 ? days + "đ " : "") + 
+                    (hours < 10 ? "0" + hours : hours) + "g " + 
+                    (minutes < 10 ? "0" + minutes : minutes) + "p " + 
+                    (seconds < 10 ? "0" + seconds : seconds) + "s";
+            }, 1000);
         </script>
     </body>
     </html>
