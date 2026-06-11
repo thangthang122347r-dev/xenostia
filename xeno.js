@@ -440,6 +440,294 @@ app.get('/admin', async (req, res) => {
     </body>
     </html>`);
 });
+app.get('/changelog', (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Xenostia - Changelog</title>
+        <link href="https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Lexend:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            @keyframes changelogShimmer {
+                0% { background-position: 0% 50% !important; }
+                100% { background-position: 100% 50% !important; }
+            }
+
+            body {
+                background-color: #0c0c0e;
+                color: #e2e8f0;
+                font-family: 'Lexend', sans-serif;
+                margin: 0;
+                padding: 40px 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+            }
+
+            .container {
+                max-width: 650px;
+                width: 100%;
+                background: #141418;
+                border: 1px solid #22222a;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            }
+
+            /* Bộ chọn ngôn ngữ tiện lợi */
+            .lang-selector {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 25px;
+            }
+
+            .lang-btn {
+                background: #1e1e24;
+                border: 1px solid #33333c;
+                color: #94a3b8;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-family: 'Lexend', sans-serif;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+
+            .lang-btn:hover {
+                border-color: #ffaa00;
+                color: #fff;
+            }
+
+            .lang-btn.active {
+                background: #ffaa00;
+                color: #000;
+                border-color: #ffaa00;
+                font-weight: 600;
+                box-shadow: 0 0 12px rgba(255, 170, 0, 0.3);
+            }
+
+            /* Khung nội dung Changelog */
+            .changelog-content {
+                display: none;
+                line-height: 1.6;
+            }
+
+            .changelog-content.active {
+                display: block;
+            }
+
+            /* Tiêu đề Shimmer lấp lánh đặc trưng */
+            .shimmer-title {
+                text-align: center; 
+                color: #ffffff; 
+                font-family: 'Hammersmith One', sans-serif;
+                padding: 10px 25px;
+                margin: 15px auto 25px auto;
+                border-radius: 8px;
+                -webkit-text-stroke: 1.2px #ffffff;
+                text-stroke: 1.2px #ffffff;
+                display: table !important; 
+                background: linear-gradient(110deg, #050505 0%, #1a1a1a 35%, rgba(255, 255, 255, 0.75) 50%, #333333 65%, #4a4a4a 100%) !important;
+                background-size: 300% 100% !important;
+                animation: changelogShimmer 2.5s ease-in-out infinite alternate !important;
+            }
+
+            hr {
+                border: 0;
+                height: 1px;
+                background: #2d2d3a;
+                margin: 20px 0;
+            }
+
+            ul {
+                padding-left: 20px;
+            }
+
+            li {
+                margin-bottom: 8px;
+                color: #cbd5e1;
+            }
+
+            strong {
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="container">
+            <div class="lang-selector">
+                <button class="lang-btn active" onclick="switchLang('vi')">Tiếng Việt</button>
+                <button class="lang-btn" onclick="switchLang('en')">English</button>
+                <button class="lang-btn" onclick="switchLang('hk')">繁體中文</button>
+            </div>
+
+            <!-- TIẾNG VIỆT -->
+            <div id="lang-vi" class="changelog-content active">
+                <h2 class="shimmer-title">📋 Nhật Ký Thay Đổi</h2>
+                <p><strong>🧩 Ngày cập nhật:</strong> 08/06/2026</p>
+                <p><strong>📏 Số dòng lệnh đạt được:</strong> 9294+ lines</p>
+                <hr>
+                <p><strong>🔧 Sửa lỗi & Tối ưu hóa:</strong></p>
+                <ul>
+                    <li>[MỚI] Sửa lỗi hệ thống quét máy chủ (server scanner)</li>
+                    <li>Sửa lỗi hiển thị số lượng người chơi trên server (server population)</li>
+                    <li>Sửa lỗi hệ thống tài khoản phụ (Alts) và lỗi hiển thị HUD của Alts</li>
+                    <li>Sửa lỗi hiển thị Thương (Spear) khi chơi alts</li>
+                    <li>Xử lý triệt để lỗi bộ dựng hình (renderer bug) và lỗi WASM trên tài khoản phụ</li>
+                    <li>Chuyển đổi hiệu ứng thông báo từ "phải sang trái" thành "từ trên xuống" cho mượt hơn</li>
+                    <li>Sửa lỗi hiển thị thu phóng (zoom) và hiển thị các con số trên alts</li>
+                    <li>Tối ưu hóa WASM giúp alts truyền tải dữ liệu mượt mà, không bị delay</li>
+                    <li>Xóa tài khoản phụ (Alt) giờ đây cực nhanh, gần như tức thì!</li>
+                    <li>Sửa lỗi mất kết nối (disconnect) gây đơ hoặc văng/sập màn hình</li>
+                    <li>Sửa giới hạn RAM (RAM limit) giúp tối ưu hóa hiệu năng toàn hệ thống</li>
+                    <li>Tối ưu cấu trúc HTML của giao diện cửa hàng (Shop Layout)</li>
+                    <li>Sửa lỗi phím bấm nhanh (Xkey) cho bom (Bomb), cung (Bow) và thương (Spear)</li>
+                    <li>Sửa lỗi và cải tiến hệ thống tự động ngắm (Aim assist)</li>
+                </ul>
+                <p><strong>✨ Tính năng mới:</strong></p>
+                <ul>
+                    <li>Tích hợp tính năng mới UTH</li>
+                    <li>Đã có thể trực tiếp theo dõi nguyên liệu/tài nguyên của alts ngay trong phần Cài đặt (Settings)</li>
+                    <li>Gỡ bỏ tùy chọn cũ 'send res alts' để tối ưu hóa hoàn toàn không gian menu Cài đặt</li>
+                    <li>Thêm cơ chế click để tự thoát menu nhanh khi bị kẹt giao diện</li>
+                    <li>Thêm hiệu ứng viền màn hình nhấp nháy đỏ khi rơi vào trạng thái thấp máu (Low heart effect)</li>
+                    <li>Cấu trúc lại toàn bộ HTML của thanh máu (Health) và giáp (Shield) để tối ưu hiển thị</li>
+                    <li>Thay đổi cách hiển thị chỉ số server (Server stats) trực quan, chi tiết và rõ ràng hơn</li>
+                    <li>Thêm tính năng tự động mua thương khi đi raid riêng cho chế độ 1b1 (Auto buy spear raid for 1b1)</li>
+                    <li>Bổ sung hàm helper xử lý khoảng giữa uth và ahrc</li>
+                    <li>Thêm tính năng phím ] dành riêng cho raid 1b1 alt</li>
+                    <li>Tính năng chọn map sẽ di chuyển tới khu vực đó</li>
+                    <li>Cải thiện chế độ Spectate (Spectate mode)</li>
+                    <li>Cải thiện tính năng tự động hồi sinh alt (Auto respawn alt)</li>
+                    <li>Đã fix xkey bomb, spear, bow (Cần bật auto respawn để alt tự mua bow)</li>
+                    <li>Xóa bỏ thông báo HUD intro khi vào server</li>
+                </ul>
+                <p><strong>🔮 Sắp ra mắt:</strong></p>
+                <ul>
+                    <li>Hệ thống phiên làm việc / Session system (quá khó)</li>
+                </ul>
+            </div>
+
+            <!-- ENGLISH -->
+            <div id="lang-en" class="changelog-content">
+                <h2 class="shimmer-title">📋 Changelog</h2>
+                <p><strong>🧩 Update Date:</strong> 08/06/2026</p>
+                <p><strong>📏 Code Lines Reached:</strong> 9294+ lines</p>
+                <hr>
+                <p><strong>🔧 Fixes & Optimization:</strong></p>
+                <ul>
+                    <li>[NEW] Fixed server scanner system</li>
+                    <li>Fixed server population display bug</li>
+                    <li>Fixed Alts system and Alts HUD display issues</li>
+                    <li>Fixed Spear display bug when playing on alts</li>
+                    <li>Completely resolved renderer bug and WASM errors on alts</li>
+                    <li>Changed notification animation from right-to-left to top-down for smoother transition</li>
+                    <li>Fixed zoom and number display issues on alts</li>
+                    <li>Optimized WASM for smoother alt data transmission without delay</li>
+                    <li>Deleting alts is now extremely fast, practically instant!</li>
+                    <li>Fixed disconnection issues causing screen freezing or crashes</li>
+                    <li>Fixed RAM limit to optimize entire system performance</li>
+                    <li>Optimized HTML structure for the Shop Layout</li>
+                    <li>Fixed quick-key (Xkey) for Bomb, Bow, and Spear</li>
+                    <li>Fixed and improved Aim Assist system</li>
+                </ul>
+                <p><strong>✨ New Features:</strong></p>
+                <ul>
+                    <li>Integrated new UTH feature</li>
+                    <li>Added ability to track alt materials/resources directly in Settings</li>
+                    <li>Removed 'send res alts' option to fully optimize Settings menu space</li>
+                    <li>Added a click-to-exit option to quickly close the interface if stuck</li>
+                    <li>Added low health border flashing red effect (Low heart effect)</li>
+                    <li>Restructured entire HTML for Health and Shield bars for optimal display</li>
+                    <li>Changed server stats display to be more intuitive, detailed, and clear</li>
+                    <li>Added auto-buy spear for raids, exclusively for 1b1 mode</li>
+                    <li>Added helper function to handle the gap between UTH and AHRC</li>
+                    <li>Added ] hotkey feature dedicated to 1b1 alt raids</li>
+                    <li>Map selection feature now teleports to the selected area</li>
+                    <li>Improved Spectate mode</li>
+                    <li>Improved auto-respawn for alts</li>
+                    <li>Fixed Xkey for Bomb, Spear, and Bow (Requires auto-respawn for alts to buy Bow)</li>
+                    <li>Removed HUD intro notification upon entering the server</li>
+                </ul>
+                <p><strong>🔮 Coming Soon:</strong></p>
+                <ul>
+                    <li>Session system (too hard)</li>
+                </ul>
+            </div>
+
+            <!-- HONG KONG (繁體中文) -->
+            <div id="lang-hk" class="changelog-content">
+                <h2 class="shimmer-title">📋 更新日誌</h2>
+                <p><strong>🧩 更新日期:</strong> 08/06/2026</p>
+                <p><strong>📏 代碼行數已達:</strong> 9294+ 行</p>
+                <hr>
+                <p><strong>🔧 修正與優化:</strong></p>
+                <ul>
+                    <li>[全新] 修復伺服器掃描系統 (server scanner)</li>
+                    <li>修復伺服器人數顯示錯誤 (server population)</li>
+                    <li>修復分帳系統 (Alts) 及分帳 HUD 顯示錯誤</li>
+                    <li>修復在分帳上遊玩時的長槍 (Spear) 顯示錯誤</li>
+                    <li>徹底解決分帳上的渲染器錯誤 (renderer bug) 及 WASM 錯誤</li>
+                    <li>將通知動畫從「右至左」改為「從上至下」，運作更流暢</li>
+                    <li>修復分帳的縮放與數字顯示錯誤</li>
+                    <li>優化 WASM，讓分帳數據傳輸更流暢、零延遲</li>
+                    <li>刪除分帳速度極快，幾乎瞬間完成！</li>
+                    <li>修復斷線時導致畫面卡死、凍結或崩潰的問題</li>
+                    <li>修正記憶體限制 (RAM limit)，優化全系統效能</li>
+                    <li>優化商店介面 (Shop Layout) 的 HTML 結構</li>
+                    <li>修復炸彈 (Bomb)、弓箭 (Bow) 及長槍 (Spear) 的快捷鍵 (Xkey)</li>
+                    <li>修復並改進自動 aim 輔助系統 (Aim assist)</li>
+                </ul>
+                <p><strong>✨ 新功能:</strong></p>
+                <ul>
+                    <li>整合全新 UTH 功能</li>
+                    <li>新增可直接在設定 (Settings) 中查看分帳材料/資源的功能</li>
+                    <li>移除舊有的 'send res alts' 選項，以徹底釋放設定選單空間</li>
+                    <li>新增點擊機制，當介面卡住時可快速強制退出選單</li>
+                    <li>新增低血量時螢幕邊框閃爍紅光的特效 (Low heart effect)</li>
+                    <li>重構血量條 (Health) 與護甲條 (Shield) 的 HTML 結構以優化顯示</li>
+                    <li>改變伺服器數據 (Server stats) 的顯示方式，更直觀、詳細且清晰</li>
+                    <li>新增 1b1 模式專用的突襲自動購買長槍功能 (Auto buy spear raid for 1b1)</li>
+                    <li>新增處理 uth 與 ahrc 之間間距的 helper 函數</li>
+                    <li>新增專屬於 1b1 分帳突襲的 ] 鍵功能</li>
+                    <li>地圖選擇功能現在會直接傳送到該區域</li>
+                    <li>改進觀戰模式 (Spectate mode)</li>
+                    <li>改進分帳自動復活功能 (Auto respawn alt)</li>
+                    <li>已修復炸彈、長槍、弓箭的 Xkey (需要開啟 auto respawn 以便分帳購買弓箭)</li>
+                    <li>移除了進入伺服器時的 HUD intro 歡迎通知</li>
+                </ul>
+                <p><strong>🔮 即將推出:</strong></p>
+                <ul>
+                    <li>會話系統 / Session system (太難了)</li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            function switchLang(langCode) {
+                // 1. Ẩn tất cả các tab nội dung
+                document.querySelectorAll('.changelog-content').forEach(el => {
+                    el.classList.remove('active');
+                });
+                // 2. Tắt trạng thái active của tất cả các nút bấm
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 3. Hiển thị tab và kích hoạt nút tương ứng
+                document.getElementById('lang-' + langCode).classList.add('active');
+                event.currentTarget.classList.add('active');
+            }
+        </script>
+    </body>
+    </html>
+    `);
+});
 // 🛠️ API ĐIỀU CHỈNH CẤU HÌNH HỆ THỐNG
 app.post('/api/system-settings', async (req, res) => {
     if (req.query.pwd !== ADMIN_PASSWORD) return res.status(403).json({ error: "No permission" });
